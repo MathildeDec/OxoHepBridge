@@ -1,0 +1,37 @@
+[Unit]
+Description=OXO to HOMER HEP bridge (UAUDP/UA3G/NOE -> HEPv3)
+Documentation=https://github.com/<org>/oxo-hep-bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Type=notify : oxo-hep-bridge envoie READY=1 via sd_notify une fois la
+# configuration validée et prête (voir src/oxo_hep_bridge/sdnotify.py) ;
+# systemd attend ce signal avant de considérer le service comme démarré,
+# au lieu de le supposer immédiatement (Type=simple).
+Type=notify
+User=oxo-hep-bridge
+Group=oxo-hep-bridge
+# AmbientCapabilities requis uniquement pour capture live sur interface (CAP_NET_RAW/CAP_NET_ADMIN)
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+WorkingDirectory=/opt/oxo-hep-bridge
+Environment=OXOHEP_CONFIG=/etc/oxo-hep-bridge/oxo-hep-bridge.toml
+ExecStart=/opt/oxo-hep-bridge/.venv/bin/oxo-hep-bridge --config ${OXOHEP_CONFIG}
+Restart=on-failure
+RestartSec=5
+# Watchdog optionnel : décommenter pour que systemd redémarre le service si
+# aucun WATCHDOG=1 n'est reçu pendant WatchdogSec secondes (oxo-hep-bridge
+# notifie à WatchdogSec/2). Ce watchdog détecte un process totalement figé
+# ou disparu, PAS un appel réseau individuellement bloqué (send() qui ne
+# revient jamais avec un collecteur qui cesse de lire sans fermer la
+# connexion) tant que le reste du process continue de tourner — voir
+# sdnotify.py et docs/architecture.md pour le détail de cette limite.
+#WatchdogSec=30
+
+[Install]
+WantedBy=multi-user.target

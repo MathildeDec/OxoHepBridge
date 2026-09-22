@@ -1,0 +1,87 @@
+# Configuration d'exemple pour oxo-hep-bridge
+# Copier en config/oxo-hep-bridge.toml et adapter.
+# Priorité : options CLI > variables d'environnement (OXOHEP_*) > ce fichier TOML > valeurs par défaut.
+
+[capture]
+# Source : live (interface) OU offline (pcap). Les deux sont mutuellement exclusifs.
+interface = "eth0"
+# bpf = "udp port 32640"
+# pcap = "/path/to/capture.pcap"
+
+# Decode-as tshark : force le décodage UAUDP sur un port non standard.
+# decode_as = ["udp.port==32640,uaudp"]
+
+# Laisser vide pour que tshark sorte TOUS les champs (recommandé) :
+# une liste -e restrictive change le format de sortie (clés uaudp_opcode au lieu
+# de uaudp_uaudp_opcode, plus de structure "layers") et casse la détection.
+fields = []
+
+# Chemin vers l'exécutable tshark (défaut : "tshark", résolu via PATH).
+# Utile si tshark n'est pas dans le PATH du contexte d'exécution (ex: unité
+# systemd avec un PATH restreint) ou pour cibler une version précise
+# installée ailleurs que dans le PATH par défaut.
+# tshark_path = "/usr/bin/tshark"
+
+[hep]
+# Collecteur heplify-server / HOMER
+host = "127.0.0.1"
+port = 9060
+# HEP capture agent ID (entier > 1, évitez les IDs déjà utilisés sur votre HOMER)
+capture_agent_id = 2001
+# Type de protocole HEP (1=SIP, 100=LOG générique). 100 = recommandé pour UA custom.
+proto_type = 100
+# Clé d'authentification HEP (si configurée côté heplify-server NodePW).
+# auth_key = "changeme"
+# Nom du nœud / group id HEP (chunk 0x0013), affiché côté HOMER pour distinguer
+# plusieurs agents oxo-hep-bridge (ex: un par site/PABX).
+# node_name = "oxo-besancon-01"
+# Intervalle (secondes) entre deux paquets HEP keepalive envoyés en capture
+# live (0 = désactivé). Utile pour signaler à HOMER/heplify-server que l'agent
+# est toujours actif même en l'absence de trafic OXO (nuit, PABX peu chargé).
+# keepalive_interval = 60
+# Transport HEP vers le collecteur : "udp" (défaut), "tcp" ou "tls".
+# transport = "udp"
+# Vérification du certificat serveur en transport "tls" (nom d'hôte + chaîne
+# de confiance) — désactiver uniquement en labo contre un certificat
+# auto-signé, jamais en production. Sans effet hors transport "tls".
+# tls_verify = true
+# CA personnalisée pour vérifier le certificat du collecteur en transport
+# "tls" (sinon la chaîne de confiance système est utilisée). Sans effet hors
+# transport "tls".
+# tls_ca_file = "/etc/pki/homer-ca.pem"
+# Compresse le payload HEP en gzip (chunk 0x0010 au lieu de 0x000F).
+# ATTENTION : ce chunk optionnel n'est PAS décodé par HOMER11/heplify-server
+# à ce jour (chunk inconnu ignoré silencieusement côté collecteur) — activer
+# cette option ferait perdre le payload de chaque paquet en pratique. Ne
+# jamais activer sans avoir vérifié le support explicite du collecteur cible.
+# compress_payload = false
+# Nombre de tentatives supplémentaires sur échec d'envoi (collecteur
+# temporairement injoignable, socket saturée), avec backoff exponentiel
+# entre chaque essai (0 = désactivé, comportement historique). Fonctionne
+# avec les trois transports (udp/tcp/tls).
+# send_retries = 0
+# Délai de base en secondes avant la 1re nouvelle tentative (doublé à
+# chaque tentative suivante : 0.5s, 1s, 2s... pour la valeur par défaut).
+# Sans effet si send_retries vaut 0.
+# send_retry_backoff = 0.5
+
+[normalizer]
+# Champ utilisé comme correlation_id (vide = synthèse IP+ports canonicalisés,
+# c'est-à-dire que A→B et B→A produisent le même identifiant).
+correlation_field = ""
+
+[logging]
+# loguru level: DEBUG | INFO | WARNING | ERROR
+level = "INFO"
+# Fréquence (en nombre de paquets HEP envoyés) du log de progression pendant
+# le run (utile sur un flux à faible débit pour vérifier que le pont
+# progresse sans attendre le résumé de fin de run). 0 = désactivé (seul le
+# résumé de fin de run reste affiché).
+# stats_interval = 500
+# Chemin de fichier optionnel : ajoute une sortie JSON Lines structurée (un
+# objet JSON par ligne) en plus de la sortie stderr humaine habituelle. Les
+# enregistrements résumé de fin de run/log de progression y portent en plus
+# le détail complet des compteurs (Stats.to_dict()) sous record.extra.stats
+# — utile pour un pipeline de supervision qui consomme du JSON plutôt que du
+# texte (Loki, ELK, etc.). Absent = désactivé (comportement historique).
+# json_file = "/var/log/oxo-hep-bridge/stats.json"
