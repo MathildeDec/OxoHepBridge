@@ -1,0 +1,16 @@
+# Environnement uv (géré par `uv sync`) — jamais committé.
+.venv/
+
+# Caches Python / outillage.
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Artefacts de couverture.
+.coverage
+coverage.xml
+
+# Archives de livraison (construites par `make package`, jamais committées).
+dist/
