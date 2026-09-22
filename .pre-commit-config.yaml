@@ -1,0 +1,33 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+
+  - repo: local
+    hooks:
+      # Volontairement à pre-push, pas pre-commit : la suite complète tourne
+      # à chaque push (et en CI, voir .github/workflows/ci.yml), pas à
+      # chaque commit local, pour ne pas ralentir des commits intermédiaires
+      # fréquents pendant une session — le filet de sécurité reste bien
+      # systématique avant que le code ne quitte la machine locale.
+      - id: pytest-quick
+        name: pytest (unit tests)
+        entry: .venv/bin/pytest -q
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

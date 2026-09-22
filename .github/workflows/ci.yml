@@ -1,0 +1,56 @@
+name: CI
+
+"on":
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+jobs:
+  quality:
+    name: Qualité (lint, format, type check, tests)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du dépôt
+        uses: actions/checkout@v7
+
+      - name: Installation de uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Installation de Python
+        run: uv python install
+
+      - name: Installation des dépendances (extra dev)
+        # --locked : échoue si uv.lock diverge de pyproject.toml plutôt que
+        # de régénérer silencieusement le lock (durcissement session 44).
+        run: uv sync --locked --extra dev
+
+      - name: Lint (ruff check)
+        run: uv run ruff check .
+
+      - name: Formatage (ruff format --check)
+        run: uv run ruff format --check .
+
+      - name: Type check (mypy)
+        run: uv run mypy
+
+      - name: Tests (pytest + couverture)
+        # Seuil minimal 80 % (même valeur que `make test-cov`, vérifié par
+        # tests/test_ci_config.py). Les tests tshark réels se sautent
+        # proprement si tshark est absent de l'environnement d'exécution.
+        run: uv run pytest --cov=oxo_hep_bridge --cov-report=term-missing --cov-report=xml --cov-fail-under=80
+
+      - name: Publication du rapport de couverture (artifact)
+        # coverage.xml (format Cobertura) produit par l'étape pytest --cov ;
+        # conservé 14 jours, temps de téléchargement court.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 14
+          if-no-files-found: warn
